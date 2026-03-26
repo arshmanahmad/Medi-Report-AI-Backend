@@ -1,0 +1,10 @@
+node_modules
+dist
+*.log
+.env
+.env.local
+.DS_Store
+ai-services/venv
+ai-services/.venv
+ai-services/__pycache__
+ai-services/**/__pycache__

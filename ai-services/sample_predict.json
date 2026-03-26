@@ -1,0 +1,23 @@
+{
+  "test_values": {
+    "glucose": 95,
+    "urea": 25,
+    "creatinine": 0.9,
+    "hemoglobin": 14.5,
+    "platelets": 250000,
+    "wbc": 7000,
+    "rbc": 4.5,
+    "alt": 30,
+    "ast": 28,
+    "bilirubin": 0.8,
+    "albumin": 4.2,
+    "sodium": 140,
+    "potassium": 4.0,
+    "cholesterol": 180,
+    "hdl": 55,
+    "ldl": 110,
+    "triglycerides": 120
+  },
+  "selected_disease": null,
+  "user_id": null
+}

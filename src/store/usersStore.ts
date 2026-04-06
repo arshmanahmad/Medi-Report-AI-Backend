@@ -1,32 +1,59 @@
 import type { User } from "../types";
+import { hashPassword } from "../lib/password";
+import { buildSeedStoredUsers } from "../seed/accounts";
 
-const users: User[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@example.com",
-    role: "user",
-    createdAt: "2024-01-15",
-  },
-  {
-    id: "admin-1",
-    name: "Admin User",
-    email: "admin@example.com",
-    role: "admin",
-    createdAt: "2024-01-10",
-  },
-];
+export type StoredUser = User & { passwordHash: string };
+
+let users: StoredUser[] = [];
+
+function seedDefaultUsers(): void {
+  users = buildSeedStoredUsers();
+}
+
+export function initializeUsersFromState(list: StoredUser[] | null): void {
+  if (list && list.length > 0) {
+    users = list.filter(
+      (u) =>
+        u &&
+        typeof u.passwordHash === "string" &&
+        u.passwordHash.includes(":")
+    );
+    if (users.length === 0) {
+      seedDefaultUsers();
+    }
+    return;
+  }
+  seedDefaultUsers();
+}
+
+export function getUsersForPersistence(): StoredUser[] {
+  return users.map((u) => ({ ...u }));
+}
 
 export function getUsers(): User[] {
-  return [...users];
+  return users.map(toPublicUser);
+}
+
+export function toPublicUser(u: StoredUser): User {
+  const { passwordHash: _, ...rest } = u;
+  return rest;
+}
+
+export function findStoredUserByEmail(email: string): StoredUser | undefined {
+  return users.find((u) => u.email.toLowerCase() === email.toLowerCase());
 }
 
 export function findUserByEmail(email: string): User | undefined {
-  return users.find((u) => u.email === email);
+  const u = findStoredUserByEmail(email);
+  return u ? toPublicUser(u) : undefined;
 }
 
-export function addUser(user: User): void {
-  users.push(user);
+export function addUser(user: User, password: string): void {
+  const stored: StoredUser = {
+    ...user,
+    passwordHash: hashPassword(password),
+  };
+  users.push(stored);
 }
 
 export function updateUserById(
@@ -36,7 +63,7 @@ export function updateUserById(
   const i = users.findIndex((u) => u.id === id);
   if (i === -1) return undefined;
   users[i] = { ...users[i], ...updates };
-  return users[i];
+  return toPublicUser(users[i]);
 }
 
 export function deleteUserById(id: string): boolean {

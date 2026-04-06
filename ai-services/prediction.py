@@ -288,15 +288,27 @@ def _recovery_timeline(predictions):
 
 
 def run_predictions(test_values, selected_disease, user_id=None):
-    """Main entry: run rule-based predictions and build full result."""
+    """Main entry: run rule-based predictions, optional ML hint, incremental learning."""
+    from learning import append_training_sample, predict_ml_overall_risk
+
     predictions = _run_rule_predictions(test_values, selected_disease)
     salt_recommendations = _salt_recommendations(predictions)
     diet_plan = _diet_plan(predictions)
     recovery_timeline = _recovery_timeline(predictions)
 
-    return {
+    training_samples = append_training_sample(test_values, predictions)
+    ml_overall_risk = predict_ml_overall_risk(test_values)
+
+    out = {
         "predictions": predictions,
         "saltRecommendations": salt_recommendations,
         "dietPlan": diet_plan,
         "recoveryTimeline": recovery_timeline,
+        "learning": {
+            "trainingSamplesLogged": training_samples,
+            "mlModelActive": ml_overall_risk is not None,
+        },
     }
+    if ml_overall_risk is not None:
+        out["mlOverallRisk"] = ml_overall_risk
+    return out

@@ -4,14 +4,22 @@ import { getHistory, getHistoryById } from "../store/historyStore";
 export const historyRouter = Router();
 
 historyRouter.get("/", (req: Request, res: Response) => {
-  const userId = (req.query.userId as string) || "default";
-  const list = getHistory(userId);
+  const auth = req.auth;
+  if (!auth) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const list = getHistory(auth.userId);
   res.json(list);
 });
 
 historyRouter.get("/:id", (req: Request, res: Response) => {
-  const userId = (req.query.userId as string) || "default";
-  const item = getHistoryById(userId, req.params.id);
+  const auth = req.auth;
+  if (!auth) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+  const item = getHistoryById(auth.userId, req.params.id);
   if (!item) {
     res.status(404).json({ error: "Report not found" });
     return;

@@ -3,6 +3,7 @@ dist
 *.log
 .env
 .env.local
+data/app-state.json
 .DS_Store
 ai-services/venv
 ai-services/.venv

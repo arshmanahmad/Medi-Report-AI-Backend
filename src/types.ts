@@ -62,6 +62,12 @@ export interface PredictionResult {
   recoveryTimeline: RecoveryTimeline;
   testDate: string;
   userId?: string;
+  /** Present when a trained sklearn model exists (see ai-services/train_model.py). */
+  mlOverallRisk?: string;
+  learning?: {
+    trainingSamplesLogged: number;
+    mlModelActive: boolean;
+  };
 }
 
 export interface HealthHistory {

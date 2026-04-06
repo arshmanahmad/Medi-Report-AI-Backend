@@ -2,7 +2,7 @@ import axios from "axios";
 import http from "http";
 import type { MedicalTestInput, PredictionResult } from "../types";
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://127.0.0.1:5000";
+const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://127.0.0.1:5001";
 
 /** Fresh TCP connection each request — avoids stale sockets and ECONNRESET on Windows. */
 const httpAgent = new http.Agent({ keepAlive: false });

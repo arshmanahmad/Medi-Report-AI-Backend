@@ -1,6 +1,15 @@
 import { Router, Request, Response } from "express";
-import { getUsers, addUser, updateUserById, deleteUserById } from "../store/usersStore";
-import { getTotalReportCount, historyStore } from "../store/historyStore";
+import {
+  getUsers,
+  addUser,
+  updateUserById,
+  deleteUserById,
+} from "../store/usersStore";
+import {
+  getTotalReportCount,
+  deleteHistoryForUser,
+  persistAppState,
+} from "../store/historyStore";
 import type { User } from "../types";
 
 export const adminRouter = Router();
@@ -14,7 +23,8 @@ adminRouter.get("/stats", (_req: Request, res: Response) => {
     totalAdmins: allUsers.filter((u) => u.role === "admin").length,
     totalReports,
     activeModels: 1,
-    aiServiceNote: "Rule-based engine in ai-services (train_model.py for ML)",
+    aiServiceNote:
+      "Rule-based engine in ai-services; optional RF model + incremental training_data",
   });
 });
 
@@ -23,19 +33,24 @@ adminRouter.get("/users", (_req: Request, res: Response) => {
 });
 
 adminRouter.post("/users", (req: Request, res: Response) => {
-  const { name, email, role } = req.body as {
+  const { name, email, role, password } = req.body as {
     name?: string;
     email?: string;
     role?: "user" | "admin";
+    password?: string;
   };
   if (!name || !email) {
     res.status(400).json({ error: "Name and email required" });
     return;
   }
-  if (getUsers().some((u) => u.email === email)) {
+  if (getUsers().some((u) => u.email.toLowerCase() === email.toLowerCase())) {
     res.status(409).json({ error: "Email already exists" });
     return;
   }
+  const pwd =
+    typeof password === "string" && password.length >= 6
+      ? password
+      : "TempPass123!";
   const user: User = {
     id: `user-${Date.now()}`,
     name,
@@ -43,7 +58,8 @@ adminRouter.post("/users", (req: Request, res: Response) => {
     role: role === "admin" ? "admin" : "user",
     createdAt: new Date().toISOString().split("T")[0],
   };
-  addUser(user);
+  addUser(user, pwd);
+  persistAppState();
   res.status(201).json(user);
 });
 
@@ -65,6 +81,7 @@ adminRouter.patch("/users/:id", (req: Request, res: Response) => {
     res.status(404).json({ error: "User not found" });
     return;
   }
+  persistAppState();
   res.json(updated);
 });
 
@@ -74,6 +91,6 @@ adminRouter.delete("/users/:id", (req: Request, res: Response) => {
     res.status(404).json({ error: "User not found" });
     return;
   }
-  delete historyStore[req.params.id];
+  deleteHistoryForUser(req.params.id);
   res.status(204).send();
 });

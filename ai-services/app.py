@@ -80,7 +80,8 @@ def predict():
 
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    # Default 5001 — port 5000 is often used by PostgreSQL on Windows
+    port = int(os.environ.get("PORT", 5001))
     debug = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
     # threaded=True avoids ECONNRESET when Node calls /predict while /health is in flight
     app.run(

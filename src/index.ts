@@ -13,6 +13,7 @@ import { historyRouter } from "./routes/history";
 import { authRouter } from "./routes/auth";
 import { adminRouter } from "./routes/admin";
 bootstrapPersistence();
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || "http://127.0.0.1:5001";

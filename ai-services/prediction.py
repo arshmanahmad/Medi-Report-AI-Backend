@@ -3,6 +3,7 @@ Disease prediction engine using medical constraints (rule-based).
 Designed to be trainable: add data to data/training_data.json and run train_model.py to improve.
 """
 from pathlib import Path
+import math
 
 MODEL_DIR = Path(__file__).resolve().parent
 MODEL_PATH = MODEL_DIR / "models" / "disease_model.joblib"
@@ -14,7 +15,10 @@ def _get_float(d, key, default=0.0):
     if v is None:
         return default
     try:
-        return float(v)
+        n = float(v)
+        if math.isnan(n) or math.isinf(n):
+            return default
+        return n
     except (TypeError, ValueError):
         return default
 
@@ -32,31 +36,37 @@ def _predict_diabetes(values):
 def _predict_anemia(values):
     """Hemoglobin (g/dL). Below 12 suggests anemia risk."""
     hb = _get_float(values, "hemoglobin", 14)
+    if hb < 10:
+        return "High", 0.86, "Markedly low hemoglobin suggests high anemia risk. Prompt clinical evaluation is recommended."
     if hb < 12:
-        return "High", 0.8, "Low hemoglobin suggests anemia. Iron-rich diet and possible supplementation; see a doctor."
-    if hb < 13:
-        return "Moderate", 0.45, "Hemoglobin slightly low. Increase iron-rich foods and vitamin C for absorption."
-    return "Low", 0.2, "Hemoglobin is in normal range."
+        return "Moderate", 0.58, "Hemoglobin is below normal and suggests anemia risk. Increase iron-rich diet and follow up with your doctor."
+    if hb > 18.5:
+        return "High", 0.72, "Very high hemoglobin can indicate blood concentration/polycythemia risk; medical review is advised."
+    if hb > 17:
+        return "Moderate", 0.46, "Hemoglobin is above typical range; repeat CBC and hydration review are advised."
+    return "Low", 0.18, "Hemoglobin is within expected range."
 
 
 def _predict_kidney(values):
     """Creatinine and Urea. Elevated values suggest kidney stress."""
     cr = _get_float(values, "creatinine", 1.0)
     urea = _get_float(values, "urea", 25)
+    if cr >= 2.0 or urea >= 70:
+        return "High", 0.86, "Kidney markers are severely elevated and suggest high risk. Urgent medical evaluation is recommended."
     if cr > 1.2 or urea > 40:
-        return "High", 0.7, "Elevated creatinine or urea may indicate kidney function concern. Hydration and doctor review advised."
-    if cr > 1.0:
-        return "Moderate", 0.5, "Kidney markers slightly elevated. Stay well hydrated and limit excess protein/salt."
-    return "Low", 0.2, "Kidney function markers appear normal."
+        return "Moderate", 0.6, "Kidney markers are elevated. Improve hydration and arrange follow-up renal tests."
+    return "Low", 0.2, "Kidney function markers appear within expected limits."
 
 
 def _predict_liver(values):
     """ALT, AST. Elevated enzymes suggest liver stress."""
     alt = _get_float(values, "alt", 30)
     ast = _get_float(values, "ast", 28)
+    if alt >= 120 or ast >= 120:
+        return "High", 0.85, "Liver enzymes are markedly elevated. Prompt liver-focused medical evaluation is recommended."
     if alt > 40 or ast > 40:
-        return "High", 0.75, "Elevated liver enzymes detected. Avoid alcohol and fatty foods; consult a hepatologist if persistent."
-    return "Low", 0.25, "Liver enzyme levels within normal range."
+        return "Moderate", 0.6, "Liver enzymes are above normal. Avoid alcohol/fatty food and repeat tests with physician guidance."
+    return "Low", 0.2, "Liver enzyme levels are within normal range."
 
 
 def _predict_heart(values):
@@ -74,9 +84,9 @@ def _predict_heart(values):
         risk += 0.2
     if tg > 150:
         risk += 0.2
-    if risk >= 0.6:
+    if risk >= 0.7:
         return "High", 0.75, "Lipid profile suggests elevated cardiovascular risk. Diet, exercise, and possible statin under doctor guidance."
-    if risk >= 0.3:
+    if risk >= 0.35:
         return "Moderate", 0.5, "Some lipid levels need attention. Reduce saturated fat and increase fiber; recheck in 3 months."
     return "Low", 0.2, "Lipid profile appears healthy."
 
@@ -84,10 +94,10 @@ def _predict_heart(values):
 def _predict_infection(values):
     """WBC. High may indicate infection; low may indicate immune suppression."""
     wbc = _get_float(values, "wbc", 7000)
-    if wbc > 11000:
-        return "High", 0.75, "Elevated white blood cells may indicate infection or inflammation. Clinical correlation needed."
-    if wbc < 4000:
-        return "Moderate", 0.4, "Low WBC may suggest weakened immunity. Avoid infections; discuss with doctor if persistent."
+    if wbc >= 16000 or wbc <= 2500:
+        return "High", 0.82, "WBC is severely abnormal and may indicate significant infection or immune suppression. Clinical review is advised."
+    if wbc > 11000 or wbc < 4000:
+        return "Moderate", 0.55, "WBC is outside normal range and may indicate infection/inflammation or low immunity."
     return "Low", 0.15, "White blood cell count within normal range."
 
 
@@ -96,16 +106,54 @@ def _predict_hypertension(values):
     na = _get_float(values, "sodium", 140)
     k = _get_float(values, "potassium", 4.0)
     chol = _get_float(values, "cholesterol", 180)
-    risk = 0
-    if na > 145:
-        risk += 0.3
-    if k < 3.5:
-        risk += 0.3
-    if chol > 200:
-        risk += 0.2
-    if risk >= 0.5:
-        return "Moderate", 0.5, "Electrolytes and lipids may contribute to hypertension risk. Limit salt; monitor BP regularly."
-    return "Low", 0.2, "Electrolyte balance appears adequate."
+    ldl = _get_float(values, "ldl", 110)
+    tg = _get_float(values, "triglycerides", 120)
+
+    # Severe abnormalities should escalate to high risk immediately.
+    if na >= 155 or k <= 3.0 or ldl >= 170:
+        return (
+            "High",
+            0.82,
+            "Severely abnormal electrolyte/lipid markers suggest high hypertension risk. Urgent BP check and clinical review are advised.",
+        )
+
+    risk = 0.0
+    if na >= 150:
+        risk += 0.45
+    elif na > 145:
+        risk += 0.30
+
+    if k <= 3.2:
+        risk += 0.45
+    elif k < 3.5:
+        risk += 0.30
+
+    if chol >= 240:
+        risk += 0.30
+    elif chol > 200:
+        risk += 0.20
+
+    if ldl >= 160:
+        risk += 0.25
+    elif ldl > 130:
+        risk += 0.15
+
+    if tg >= 200:
+        risk += 0.15
+
+    if risk >= 1.0:
+        return (
+            "High",
+            0.76,
+            "Markers indicate high hypertension risk. Reduce sodium intake, monitor blood pressure closely, and seek doctor guidance.",
+        )
+    if risk >= 0.40:
+        return (
+            "Moderate",
+            0.56,
+            "Electrolyte and lipid pattern suggests moderate hypertension risk. Limit salt, improve lifestyle, and monitor BP regularly.",
+        )
+    return "Low", 0.22, "Current electrolyte and lipid profile suggests lower hypertension risk."
 
 
 DISEASE_CHECKS = {

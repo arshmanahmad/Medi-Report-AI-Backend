@@ -80,7 +80,6 @@ def _retrain_async() -> None:
     t = threading.Thread(target=run, daemon=True)
     t.start()
 
-
 def predict_ml_overall_risk(test_values: dict):
     """If a trained joblib model exists, predict overall risk label."""
     model_path = Path(__file__).resolve().parent / "models" / "disease_model.joblib"

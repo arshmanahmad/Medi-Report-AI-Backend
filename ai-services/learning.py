@@ -76,6 +76,7 @@ def _retrain_async() -> None:
             train_and_save()
         except Exception as e:
             print(f"[learning] Auto-retrain skipped: {e}")
+
     t = threading.Thread(target=run, daemon=True)
     t.start()
 def predict_ml_overall_risk(test_values: dict):

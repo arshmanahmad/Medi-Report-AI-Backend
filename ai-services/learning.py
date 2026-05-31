@@ -20,7 +20,6 @@ def _max_risk_from_predictions(predictions: list) -> str:
             best = rl
     return best
 
-
 def append_training_sample(test_values: dict, predictions: list) -> int:
     """
     Append one labeled row (weak label = max risk from current rules).
